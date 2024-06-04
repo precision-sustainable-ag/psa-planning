@@ -2,7 +2,7 @@
 name: Epic Template
 about: This template is used for large features that will contain lots of sub issues.
 title: ''
-labels: epic
+labels: ''
 assignees: ''
 
 ---
