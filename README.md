@@ -26,3 +26,15 @@ There are 3 main types of planning items, 2 of which are stored in this repo.
 1. It allows for a roadmap to be created for PSA as a whole and viewed in one place instead of fractured project management tools across multiple teams.
 2. It can directly link out to tasks in external repos, making it very easy to go from the top level all the way done to a specific task's conversation and documentation.
 3. You can see who the owner of an epic is quickly and easily on the roadmap.
+
+## Glossary of useful terms
+1. DST: Decision Support Tool
+2. PSA: Presision Sustainable Ag
+3. SCCC: Southern Cover Crops Council
+4. NECCC: Northeast Cover Crops Council
+5. MCCC: Midwest Cover Crops Council
+6. WCCC: Western Cover Crops Council
+7. CRAFT: Citrus Research and Field Trials
+8. GROW: Getting Rid of Weeds
+9. PM3D: PlantMap3D
+10. BBot: BenchBot
