@@ -7,10 +7,6 @@ on:
 jobs:
   add_to_project_and_update_fields:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-      projects: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -71,4 +67,4 @@ jobs:
               });
             }
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
