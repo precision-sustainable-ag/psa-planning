@@ -1,0 +1,80 @@
+name: Add Issues to GitHub Project and Update Fields
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  add_to_project_and_update_fields:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Add issue to GitHub Project and Update Fields
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const projectId = 'PVT_kwDOAwh9p84AEOSL'; // Replace with your project ID
+            const issueId = context.payload.issue.node_id;
+
+            // Find the appropriate column based on the project number
+            const labels = context.payload.issue.labels.map(label => label.name);
+            const teamLabel = labels.find(label => label.startsWith('team:'));
+            const projectLabel = labels.find(label => label.startsWith('project:'));
+
+            const teamValue = teamLabel ? teamLabel.split(':')[1].trim() : null;
+            const projectValue = projectLabel ? projectLabel.split(':')[1].trim() : null;
+
+            // Add the issue to the GitHub project
+            const addIssueToProjectMutation = `
+              mutation ($issueId: ID!, $projectId: ID!) {
+                addProjectNextItem(input: {projectId: $projectId, contentId: $issueId}) {
+                  projectNextItem {
+                    id
+                  }
+                }
+              }
+            `;
+
+            const result = await github.graphql(addIssueToProjectMutation, {
+              issueId: context.payload.issue.node_id,
+              projectId: projectId,
+              headers: {
+                authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+              }
+            });
+
+            const projectItemId = result.addProjectNextItem.projectNextItem.id;
+
+            // Update custom fields
+            if (teamValue || projectValue) {
+              const updateFieldsMutation = `
+                mutation($projectItemId: ID!, $teamValue: String, $projectValue: String) {
+                  updateProjectNextItemField(input: {
+                    projectId: $projectId,
+                    itemId: $projectItemId,
+                    fieldUpdates: [
+                      {fieldName: "Team", value: $teamValue},
+                      {fieldName: "Project", value: $projectValue}
+                    ]
+                  }) {
+                    projectNextItem {
+                      id
+                    }
+                  }
+                }
+              `;
+
+              await github.graphql(updateFieldsMutation, {
+                projectItemId: projectItemId,
+                teamValue: teamValue,
+                projectValue: projectValue,
+                headers: {
+                  authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+                }
+              });
+            }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
