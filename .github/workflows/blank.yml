@@ -40,6 +40,7 @@ jobs:
               projectId: projectId,
               contentId: issueId
             });
+            console.log('Result:', result);
             const projectItemId = result.addProjectV2ItemById.item.id;
 
             // Update custom fields
@@ -60,11 +61,12 @@ jobs:
                   }
                 }
               `;
-              await github.graphql(updateFieldsMutation, {
+              const updateResult = await github.graphql(updateFieldsMutation, {
                 projectItemId: projectItemId,
                 teamValue: teamValue,
                 projectValue: projectValue
               });
+              console.log('Update Result:', updateResult);
             }
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
