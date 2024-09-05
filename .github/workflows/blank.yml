@@ -14,10 +14,10 @@ jobs:
       - name: Authenticate with GitHub App
         id: authenticate
         run: |
-          echo "${{ secrets.GITHUB_APP_PRIVATE_KEY }}" > /tmp/private_key.pem
-          jwt=$(jwt-cli encode --header alg=RS256 --header typ=JWT --claim exp=$(date -d "+10 minutes" +%s) --claim iss=${{ secrets.GITHUB_APP_ID }} --key /tmp/private_key.pem)
-          installation_token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github.v3+json" https://api.github.com/app/installations/${{ secrets.GITHUB_APP_INSTALLATION_ID }}/access_tokens | jq -r .token)
-          echo "GITHUB_APP_TOKEN=$installation_token" >> $GITHUB_ENV
+          echo "${{ secrets.APP_PRIVATE_KEY }}" > /tmp/private_key.pem
+          jwt=$(jwt-cli encode --header alg=RS256 --header typ=JWT --claim exp=$(date -d "+10 minutes" +%s) --claim iss=${{ secrets.APP_ID }} --key /tmp/private_key.pem)
+          installation_token=$(curl -s -X POST -H "Authorization: Bearer $jwt" -H "Accept: application/vnd.github.v3+json" https://api.github.com/app/installations/${{ secrets.APP_INSTALLATION_ID }}/access_tokens | jq -r .token)
+          echo "APP_TOKEN=$installation_token" >> $GITHUB_ENV
 
       - name: Add issue to GitHub Project and Update Fields
         uses: actions/github-script@v6
@@ -75,4 +75,4 @@ jobs:
               console.log('Update Result:', updateResult);
             }
         env:
-          GITHUB_TOKEN: ${{ env.GITHUB_APP_TOKEN }}
+          GITHUB_TOKEN: ${{ env.APP_TOKEN }}
