@@ -23,14 +23,14 @@ jobs:
             const labels = context.payload.issue.labels.map(label => label.name);
             const teamLabel = labels.find(label => label.startsWith('team:'));
             const projectLabel = labels.find(label => label.startsWith('project:'));
-            const teamValue = teamLabel ? teamLabel.split(': ')[1].trim() : null;
-            const projectValue = projectLabel ? projectLabel.split(': ')[1].trim() : null;
+            const teamValue = teamLabel ? teamLabel.split(':')[1].trim() : null;
+            const projectValue = projectLabel ? projectLabel.split(':')[1].trim() : null;
 
             // Add the issue to the GitHub project
             const addIssueToProjectMutation = `
               mutation($projectId: ID!, $contentId: ID!) {
                 addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
-                  projectV2Item {
+                  item {
                     id
                   }
                 }
@@ -40,7 +40,7 @@ jobs:
               projectId: projectId,
               contentId: issueId
             });
-            const projectItemId = result.addProjectV2ItemById.projectV2Item.id;
+            const projectItemId = result.addProjectV2ItemById.item.id;
 
             // Update custom fields
             if (teamValue || projectValue) {
@@ -54,7 +54,7 @@ jobs:
                       {fieldName: "Project", value: $projectValue}
                     ]
                   }) {
-                    projectV2Item {
+                    item {
                       id
                     }
                   }
