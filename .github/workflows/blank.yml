@@ -71,9 +71,15 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
-          TEAM_LABEL=$(echo "${{ github.event.issue.labels }}" | jq -r '.[] | select(.name | startswith("team: ")) | .name' | cut -d ' ' -f2-)
-          PROJECT_LABEL=$(echo "${{ github.event.issue.labels }}" | jq -r '.[] | select(.name | startswith("project: ")) | .name' | cut -d ' ' -f2-)
-
+          # Fetch the labels from the GitHub event and convert them to JSON
+          LABELS_JSON=${{ toJson(github.event.issue.labels) }}
+          
+          # Extract the 'Team' label
+          TEAM_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("team: ")) | .name' | cut -d ' ' -f2-)
+          
+          # Extract the 'Project' label
+          PROJECT_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("project: ")) | .name' | cut -d ' ' -f2-)
+      
           if [ -n "$TEAM_LABEL" ]; then
             TEAM_OPTION_ID=$(jq --arg label "$TEAM_LABEL" '.data.organization.projectV2.fields.nodes[] | select(.name== "Team") | .options[] | select(.name==$label) | .id' project_data.json)
             gh api graphql -f query='
@@ -88,7 +94,7 @@ jobs:
                 }
               }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$TEAM_FIELD_ID -f value=$TEAM_OPTION_ID
           fi
-
+      
           if [ -n "$PROJECT_LABEL" ]; then
             PROJECT_OPTION_ID=$(jq --arg label "$PROJECT_LABEL" '.data.organization.projectV2.fields.nodes[] | select(.name== "Project") | .options[] | select(.name==$label) | .id' project_data.json)
             gh api graphql -f query='
