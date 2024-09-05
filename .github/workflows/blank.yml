@@ -2,15 +2,14 @@ name: Add Issues to GitHub Project and Update Fields
 
 on:
   issues:
-    types: [opened]
+    types:
+      - opened
 
 jobs:
   add_to_project_and_update_fields:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
+      # Generate a GitHub App token
       - name: Generate token
         id: generate-token
         uses: actions/create-github-app-token@v1
@@ -18,6 +17,7 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      # Get project data
       - name: Get project data
         id: get-project-data
         env:
@@ -25,26 +25,52 @@ jobs:
           ORGANIZATION: precision-sustainable-ag
           PROJECT_NUMBER: 5
         run: |
-          # Example to get project details
-          response=$(curl -H "Authorization: token $GH_TOKEN" \
-                            -H "Accept: application/vnd.github.v3+json" \
-                            https://api.github.com/orgs/$ORGANIZATION/projects/$PROJECT_NUMBER)
-          echo "Project Details: $response"
+          gh api graphql -f query='
+            query($org: String!, $number: Int!) {
+              organization(login: $org){
+                projectV2(number: $number) {
+                  id
+                  fields(first:20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
 
+          # Extract field IDs and project ID
+          echo 'PROJECT_ID='$(jq '.data.organization.projectV2.id' project_data.json) >> $GITHUB_ENV
+          echo 'TEAM_FIELD_ID='$(jq '.data.organization.projectV2.fields.nodes[] | select(.name== "Team") | .id' project_data.json) >> $GITHUB_ENV
+          echo 'PROJECT_FIELD_ID='$(jq '.data.organization.projectV2.fields.nodes[] | select(.name== "Project") | .id' project_data.json) >> $GITHUB_ENV
+
+      # Add issue to project and update fields
       - name: Add issue to GitHub Project and Update Fields
         uses: actions/github-script@v6
         with:
           script: |
             const { owner, repo } = context.repo;
-            const projectId = 'PVT_kwDOAwh9p84AEOSL'; // Replace with your project ID
+            const projectId = process.env.PROJECT_ID;
             const issueId = context.payload.issue.node_id;
-            
+
             // Find labels
             const labels = context.payload.issue.labels.map(label => label.name);
             const teamLabel = labels.find(label => label.startsWith('team:'));
             const projectLabel = labels.find(label => label.startsWith('project:'));
             const teamValue = teamLabel ? teamLabel.split(':')[1].trim() : null;
             const projectValue = projectLabel ? projectLabel.split(':')[1].trim() : null;
+
             // Add the issue to the GitHub project
             const addIssueToProjectMutation = `
               mutation($projectId: ID!, $contentId: ID!) {
@@ -61,16 +87,17 @@ jobs:
             });
             console.log('Result:', result);
             const projectItemId = result.addProjectV2ItemById.item.id;
+
             // Update custom fields
             if (teamValue || projectValue) {
               const updateFieldsMutation = `
-                mutation($projectItemId: ID!, $teamValue: String, $projectValue: String) {
+                mutation($projectItemId: ID!, $teamFieldId: ID, $teamValue: String, $projectFieldId: ID, $projectValue: String) {
                   updateProjectV2ItemField(input: {
                     projectId: $projectId,
                     itemId: $projectItemId,
                     fieldUpdates: [
-                      {fieldName: "Team", value: $teamValue},
-                      {fieldName: "Project", value: $projectValue}
+                      {fieldId: $teamFieldId, value: $teamValue},
+                      {fieldId: $projectFieldId, value: $projectValue}
                     ]
                   }) {
                     item {
@@ -81,7 +108,9 @@ jobs:
               `;
               const updateResult = await github.graphql(updateFieldsMutation, {
                 projectItemId: projectItemId,
+                teamFieldId: process.env.TEAM_FIELD_ID,
                 teamValue: teamValue,
+                projectFieldId: process.env.PROJECT_FIELD_ID,
                 projectValue: projectValue
               });
               console.log('Update Result:', updateResult);
