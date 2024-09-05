@@ -18,41 +18,35 @@ jobs:
             const { owner, repo } = context.repo;
             const projectId = 'PVT_kwDOAwh9p84AEOSL'; // Replace with your project ID
             const issueId = context.payload.issue.node_id;
-
-            // Find the appropriate column based on the project number
+            
+            // Find labels
             const labels = context.payload.issue.labels.map(label => label.name);
             const teamLabel = labels.find(label => label.startsWith('team:'));
             const projectLabel = labels.find(label => label.startsWith('project:'));
-
-            const teamValue = teamLabel ? teamLabel.split(':')[1].trim() : null;
-            const projectValue = projectLabel ? projectLabel.split(':')[1].trim() : null;
+            const teamValue = teamLabel ? teamLabel.split(': ')[1].trim() : null;
+            const projectValue = projectLabel ? projectLabel.split(': ')[1].trim() : null;
 
             // Add the issue to the GitHub project
             const addIssueToProjectMutation = `
-              mutation ($issueId: ID!, $projectId: ID!) {
-                addProjectNextItem(input: {projectId: $projectId, contentId: $issueId}) {
-                  projectNextItem {
+              mutation($projectId: ID!, $contentId: ID!) {
+                addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                  projectV2Item {
                     id
                   }
                 }
               }
             `;
-
             const result = await github.graphql(addIssueToProjectMutation, {
-              issueId: context.payload.issue.node_id,
               projectId: projectId,
-              headers: {
-                authorization: `Bearer ${process.env.GITHUB_TOKEN}`
-              }
+              contentId: issueId
             });
-
-            const projectItemId = result.addProjectNextItem.projectNextItem.id;
+            const projectItemId = result.addProjectV2ItemById.projectV2Item.id;
 
             // Update custom fields
             if (teamValue || projectValue) {
               const updateFieldsMutation = `
                 mutation($projectItemId: ID!, $teamValue: String, $projectValue: String) {
-                  updateProjectNextItemField(input: {
+                  updateProjectV2ItemField(input: {
                     projectId: $projectId,
                     itemId: $projectItemId,
                     fieldUpdates: [
@@ -60,20 +54,16 @@ jobs:
                       {fieldName: "Project", value: $projectValue}
                     ]
                   }) {
-                    projectNextItem {
+                    projectV2Item {
                       id
                     }
                   }
                 }
               `;
-
               await github.graphql(updateFieldsMutation, {
                 projectItemId: projectItemId,
                 teamValue: teamValue,
-                projectValue: projectValue,
-                headers: {
-                  authorization: `Bearer ${process.env.GITHUB_TOKEN}`
-                }
+                projectValue: projectValue
               });
             }
         env:
