@@ -71,10 +71,12 @@ jobs:
           LABELS_JSON: ${{ toJson(github.event.issue.labels) }}
         run: |
           # Extract labels directly from the JSON using jq
-          echo "$LABELS_JSON"
           TEAM_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("team: ")) | .name' | cut -d ' ' -f2-)
           PROJECT_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("project: ")) | .name' | cut -d ' ' -f2-)
-          
+          echo "$TEAM_LABEL"
+          echo "$PROJECT_LABEL"
+
+          echo "$(<project_data.json )"
           # Define a function to get option ID from project_data.json
           get_option_id() {
             local label="$1"
