@@ -91,7 +91,8 @@ jobs:
           echo "Extracted Team Label: $TEAM_LABEL"
           echo "Extracted Project Label: $PROJECT_LABEL"
 
-          echo "$(<project_data.json )"
+          echo "Full project_data.json content:"
+          cat project_data.json
           
           # Call the function and print its result for debugging
           team_option_id=$(get_option_id "$TEAM_LABEL" "Team")
