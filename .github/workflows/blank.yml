@@ -76,15 +76,10 @@ jobs:
           
           # Function to get option ID from project_data.json
           get_option_id() {
-            local label="$1"
+            local label_name="$1"
             local field_name="$2"
             # Extract option ID using jq
-            jq -r --arg label "$label" --arg field_name "$field_name" \
-              '.data.organization.projectV2.fields.nodes[]
-               | select(.name == $field_name)
-               | .options[]
-               | select(.name == $label)
-               | .id' project_data.json
+            jq -r --arg field_name "Team" --arg label_name "dst" '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | '.options[]' | select(.name == $label_name) | .id' project_data.json
           }
           
           # Debugging: Print extracted labels
@@ -93,8 +88,7 @@ jobs:
 
           echo "Full project_data.json content:"
           cat project_data.json
-          echo $(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Team") | .options[] | select(.name == "dst") | .id')
-          echo $(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == $TEAM_LABEL) | .options[] | select(.name == $PROJECT_LABEL) | .id')
+          echo $(jq -r --arg field_name "Team" --arg label_name "dst" '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | '.options[]' | select(.name == $label_name) | .id' project_data.json)
           
           # Call the function and print its result for debugging
           team_option_id=$(get_option_id "$TEAM_LABEL" "Team")
