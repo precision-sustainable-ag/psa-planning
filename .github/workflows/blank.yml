@@ -79,7 +79,7 @@ jobs:
             local label_name="$1"
             local field_name="$2"
             # Extract option ID using jq
-            jq -r --arg field_name "Team" --arg label_name "dst" '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | '.options[]' | select(.name == $label_name) | .id' project_data.json
+            jq -r --arg field_name "$field_name" --arg label_name "$label_name" '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | '.options[]' | select(.name == $label_name) | .id' project_data.json
           }
           
           # Debugging: Print extracted labels
