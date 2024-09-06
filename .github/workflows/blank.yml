@@ -70,38 +70,40 @@ jobs:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
           LABELS_JSON: ${{ toJson(github.event.issue.labels) }}
         run: |
-          # Extract the 'Team' label
+          # Extract labels directly from the JSON using jq
           TEAM_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("team: ")) | .name' | cut -d ' ' -f2-)
-          
-          # Extract the 'Project' label
           PROJECT_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("project: ")) | .name' | cut -d ' ' -f2-)
           
+          # Define a function to get option ID from project_data.json
+          get_option_id() {
+            local label="$1"
+            local field_name="$2"
+            jq -r --arg label "$label" --arg field_name "$field_name" \
+              '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | .options[] | select(.name == $label) | .id' \
+              project_data.json
+          }
+          
+          # Extract 'Team' option ID if TEAM_LABEL is non-empty
           if [ -n "$TEAM_LABEL" ]; then
-          TEAM_OPTION_ID=$(jq -r --arg label "$TEAM_LABEL" '.data.organization.projectV2.fields.nodes[] | select(.name == "Team") | .options[] | select(.name == $label) | .id' project_data.json)
-          gh api graphql -f query='
-            mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
-              updateProjectV2ItemFieldValue(input: {
-                projectId: $project
-                itemId: $item
-                fieldId: $field
-                value: { singleSelectOptionId: $value }
-              }) {
-                projectV2Item { id }
-              }
-            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$TEAM_FIELD_ID -f value=$TEAM_OPTION_ID
+            TEAM_OPTION_ID=$(get_option_id "$TEAM_LABEL" "Team")
+            gh api graphql -f query='
+              mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $project
+                  itemId: $item
+                  fieldId: $field
+                  value: { singleSelectOptionId: $value }
+                }) {
+                  projectV2Item { id }
+                }
+              }' -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$TEAM_FIELD_ID" -f value="$TEAM_OPTION_ID"
           fi
           
+          # Extract 'Project' option ID if PROJECT_LABEL is non-empty
           if [ -n "$PROJECT_LABEL" ]; then
-          PROJECT_OPTION_ID=$(jq -r --arg label "$PROJECT_LABEL" '.data.organization.projectV2.fields.nodes[] | select(.name == "Project") | .options[] | select(.name == $label) | .id' project_data.json)
-          gh api graphql -f query='
-            mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
-              updateProjectV2ItemFieldValue(input: {
-                projectId: $project
-                itemId: $item
-                fieldId: $field
-                value: { singleSelectOptionId: $value }
-              }) {
-                projectV2Item { id }
-              }
-            }' -f project=$PROJECT_ID -f item=$ITEM_ID -f field=$PROJECT_FIELD_ID -f value=$PROJECT_OPTION_ID
-          fi
+            PROJECT_OPTION_ID=$(get_option_id "$PROJECT_LABEL" "Project")
+            gh api graphql -f query='
+              mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $project
+                  itemId: $item
