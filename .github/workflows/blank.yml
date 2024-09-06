@@ -73,51 +73,66 @@ jobs:
           # Extract labels directly from the JSON using jq
           TEAM_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("team: ")) | .name' | cut -d ' ' -f2-)
           PROJECT_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("project: ")) | .name' | cut -d ' ' -f2-)
-
-          echo "$(<project_data.json )"
+          
+          # Function to get option ID from project_data.json
           get_option_id() {
             local label="$1"
             local field_name="$2"
+            # Extract option ID using jq
             jq -r --arg label "$label" --arg field_name "$field_name" \
-              '.data.organization.projectV2.fields.nodes[] 
-               | select(.name == $field_name) 
-               | .options[] 
-               | select(.name == $label) 
+              '.data.organization.projectV2.fields.nodes[]
+               | select(.name == $field_name)
+               | .options[]
+               | select(.name == $label)
                | .id' project_data.json
           }
-
-          # Print extracted labels
+          
+          # Debugging: Print extracted labels
           echo "Extracted Team Label: $TEAM_LABEL"
           echo "Extracted Project Label: $PROJECT_LABEL"
           
-          # Call the function and print its result
+          # Call the function and print its result for debugging
           team_option_id=$(get_option_id "$TEAM_LABEL" "Team")
           echo "Team Option ID: $team_option_id"
           
           project_option_id=$(get_option_id "$PROJECT_LABEL" "Project")
           echo "Project Option ID: $project_option_id"
           
-          # Extract 'Team' option ID if TEAM_LABEL is non-empty
+          # Proceed only if TEAM_LABEL and PROJECT_LABEL are not empty
           if [ -n "$TEAM_LABEL" ]; then
             TEAM_OPTION_ID=$(get_option_id "$TEAM_LABEL" "Team")
-            gh api graphql -f query='
-              mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
-                updateProjectV2ItemFieldValue(input: {
-                  projectId: $project
-                  itemId: $item
-                  fieldId: $field
-                  value: { singleSelectOptionId: $value }
-                }) {
-                  projectV2Item { id }
-                }
-              }' -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$TEAM_FIELD_ID" -f value="$TEAM_OPTION_ID"
+            if [ -n "$TEAM_OPTION_ID" ]; then
+              gh api graphql -f query='
+                mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $project
+                    itemId: $item
+                    fieldId: $field
+                    value: { singleSelectOptionId: $value }
+                  }) {
+                    projectV2Item { id }
+                  }
+                }' -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$TEAM_FIELD_ID" -f value="$TEAM_OPTION_ID"
+            else
+              echo "Error: Unable to find Team Option ID."
+            fi
           fi
           
-          # Extract 'Project' option ID if PROJECT_LABEL is non-empty
           if [ -n "$PROJECT_LABEL" ]; then
             PROJECT_OPTION_ID=$(get_option_id "$PROJECT_LABEL" "Project")
-            gh api graphql -f query='
-              mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
-                updateProjectV2ItemFieldValue(input: {
-                  projectId: $project
-                  itemId: $item
+            if [ -n "$PROJECT_OPTION_ID" ]; then
+              gh api graphql -f query='
+                mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $project
+                    itemId: $item
+                    fieldId: $field
+                    value: { singleSelectOptionId: $value }
+                  }) {
+                    projectV2Item { id }
+                  }
+                }' -f project="$PROJECT_ID" -f item="$ITEM_ID" -f field="$PROJECT_FIELD_ID" -f value="$PROJECT_OPTION_ID"
+            else
+              echo "Error: Unable to find Project Option ID."
+            fi
+          fi
