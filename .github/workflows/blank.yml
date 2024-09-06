@@ -93,12 +93,8 @@ jobs:
 
           echo "Full project_data.json content:"
           cat project_data.json
-          echo $(jq -r --arg label "dst" --arg field_name "Team" \
-            '.data.organization.projectV2.fields.nodes[]
-             | select(.name == $field_name)
-             | .options[]
-             | select(.name == $label)
-             | .id' project_data.json)
+          echo $(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == "Team") | .options[] | select(.name == "dst") | .id')
+          echo $(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name == $TEAM_LABEL) | .options[] | select(.name == $PROJECT_LABEL) | .id')
           
           # Call the function and print its result for debugging
           team_option_id=$(get_option_id "$TEAM_LABEL" "Team")
