@@ -13,6 +13,16 @@ There are 3 main types of planning items, 2 of which are stored in this repo.
 2. Epics: An epic is a collection of tasks. It is a larger unit of planning that links to multiple tasks in external repos. It does not go into the same level of technical detail, and is typically filled out by a project manager or a tehc lead. All epics live in this repository.
 3. Milestones: These are the largest planning unit. Each milestone is a collection of epics. These are items that may take months or years to complete. All milestones live in this repository.
 
+## Label automation using Github Actions
+Every time an issue is created, a Github Action runs that adds the issue into the PSA-Planning project linked above. It also parses the labels that start with `project: ` or `team: ` and assigns whatever comes after to either the Team or Project column in the Gihub Project.
+
+For example: if a new issue is created with the labels `team: DST` and `project: DST-selector` then the action will perform 3 tasks.
+1. It adds the issue to the PSA-Planning Github Project
+2. It assigns the Team field to `DST`
+3. It assigns the project field to `DST-selector`
+
+This avoids several manual clicks that would otherwise be needed for every issue.
+
 ## Example GitHub roadmap built from these items
 
 ![2024-08-30_10-18](https://github.com/user-attachments/assets/667342e5-6a15-474d-a820-5d352f35933e)
