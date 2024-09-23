@@ -1,0 +1,99 @@
+name: Update PSA Planning Project Fields Based on Labels
+
+on:
+  issues:
+    types:
+      - labeled
+
+jobs:
+  update_project_fields:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Get project data
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          ORGANIZATION: precision-sustainable-ag
+          PROJECT_NUMBER: 5
+        run: |
+          gh api graphql -f query='
+            query($org: String!, $number: Int!) {
+              organization(login: $org) {
+                projectV2(number: $number) {
+                  id
+                  fields(first: 20) {
+                    nodes {
+                      ... on ProjectV2Field {
+                        id
+                        name
+                      }
+                      ... on ProjectV2SingleSelectField {
+                        id
+                        name
+                        options {
+                          id
+                          name
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }' -f org=$ORGANIZATION -F number=$PROJECT_NUMBER > project_data.json
+          echo 'PROJECT_ID='$(jq -r '.data.organization.projectV2.id' project_data.json) >> $GITHUB_ENV
+          echo 'TEAM_FIELD_ID='$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name== "Team") | .id' project_data.json) >> $GITHUB_ENV
+          echo 'PROJECT_FIELD_ID='$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name== "Project") | .id' project_data.json) >> $GITHUB_ENV
+
+      - name: Set fields based on labels
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          LABELS_JSON: ${{ toJson(github.event.issue.labels) }}
+        run: |
+          TEAM_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("team: ")) | .name' | cut -d ' ' -f2-)
+          PROJECT_LABEL=$(echo "$LABELS_JSON" | jq -r '.[] | select(.name | startswith("project: ")) | .name' | cut -d ' ' -f2-)
+
+          get_option_id() {
+            local label_name="$1"
+            local field_name="$2"
+            jq -r --arg field_name "$field_name" --arg label_name "$label_name" '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | '.options[]' | select(.name == $label_name) | .id' project_data.json
+          }
+
+          if [ -n "$TEAM_LABEL" ]; then
+            TEAM_OPTION_ID=$(get_option_id "$TEAM_LABEL" "Team")
+            if [ -n "$TEAM_OPTION_ID" ]; then
+              gh api graphql -f query='
+                mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $project
+                    itemId: ${{ github.event.issue.node_id }}
+                    fieldId: $TEAM_FIELD_ID
+                    value: { singleSelectOptionId: $value }
+                  }) {
+                    projectV2Item { id }
+                  }
+                }' -f project="$PROJECT_ID" -f item="${{ github.event.issue.node_id }}" -f field="$TEAM_FIELD_ID" -f value="$TEAM_OPTION_ID"
+            fi
+          fi
+
+          if [ -n "$PROJECT_LABEL" ]; then
+            PROJECT_OPTION_ID=$(get_option_id "$PROJECT_LABEL" "Project")
+            if [ -n "$PROJECT_OPTION_ID" ]; then
+              gh api graphql -f query='
+                mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $project
+                    itemId: ${{ github.event.issue.node_id }}
+                    fieldId: $PROJECT_FIELD_ID
+                    value: { singleSelectOptionId: $value }
+                  }) {
+                    projectV2Item { id }
+                  }
+                }' -f project="$PROJECT_ID" -f item="${{ github.event.issue.node_id }}" -f field="$PROJECT_FIELD_ID" -f value="$PROJECT_OPTION_ID"
+            fi
+          fi
