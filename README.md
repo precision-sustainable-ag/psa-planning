@@ -14,7 +14,7 @@ There are 3 main types of planning items, 2 of which are stored in this repo.
 3. Milestones: These are the largest planning unit. Each milestone is a collection of epics. These are items that may take months or years to complete. All milestones live in this repository.
 
 ## Label automation using Github Actions
-Every time an issue is created, a Github Action runs that adds the issue into the PSA-Planning project linked above. It also parses the labels that start with `project: ` or `team: ` and assigns whatever comes after to either the Team or Project column in the Gihub Project.
+Every time an issue is created or an issues labels change, a Github Action runs that adds the issue into the PSA-Planning project linked above. It also parses the labels that start with `project: ` or `team: ` and assigns whatever comes after to either the Team or Project column in the Gihub Project.
 
 For example: if a new issue is created with the labels `team: DST` and `project: DST-selector` then the action will perform 3 tasks.
 1. It adds the issue to the PSA-Planning Github Project
@@ -22,6 +22,9 @@ For example: if a new issue is created with the labels `team: DST` and `project:
 3. It assigns the project field to `DST-selector`
 
 This avoids several manual clicks that would otherwise be needed for every issue.
+
+## Limitations
+1. An epic can only be assigned a sing team because GitHub Projects do not support multi select fields yet. This is currently one of the most requested features on GitHub community, so hopefully it will be added soon. Vire here for more details https://github.com/orgs/community/discussions/6580.
 
 ## Example GitHub roadmap built from these items
 
