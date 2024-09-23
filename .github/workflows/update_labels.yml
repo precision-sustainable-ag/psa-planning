@@ -49,6 +49,21 @@ jobs:
           echo 'PROJECT_ID='$(jq -r '.data.organization.projectV2.id' project_data.json) >> $GITHUB_ENV
           echo 'TEAM_FIELD_ID='$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name== "Team") | .id' project_data.json) >> $GITHUB_ENV
           echo 'PROJECT_FIELD_ID='$(jq -r '.data.organization.projectV2.fields.nodes[] | select(.name== "Project") | .id' project_data.json) >> $GITHUB_ENV
+          
+      - name: Add Issue to project
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          ISSUE_ID: ${{ github.event.issue.node_id }}
+        run: |
+          item_id=$(gh api graphql -f query='
+            mutation($project: ID!, $issue: ID!) {
+              addProjectV2ItemById(input: {projectId: $project, contentId: $issue}) {
+                item {
+                  id
+                }
+              }
+            }' -f project=$PROJECT_ID -f issue=$ISSUE_ID --jq '.data.addProjectV2ItemById.item.id')
+          echo "ITEM_ID=$item_id" >> $GITHUB_ENV
 
       - name: Set fields based on labels
         env:
