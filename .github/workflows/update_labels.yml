@@ -62,7 +62,7 @@ jobs:
           get_option_id() {
             local label_name="$1"
             local field_name="$2"
-            jq -r --arg field_name "$field_name" --arg label_name "$label_name" '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | '.options[]' | select(.name == $label_name) | .id' project_data.json
+            jq -r --arg field_name "$field_name" --arg label_name "$label_name" '.data.organization.projectV2.fields.nodes[] | select(.name == $field_name) | .options[] | select(.name == $label_name) | .id' project_data.json
           }
 
           # Loop through each team label and update the field
@@ -73,8 +73,8 @@ jobs:
                 mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
                   updateProjectV2ItemFieldValue(input: {
                     projectId: $project
-                    itemId: ${{ github.event.issue.node_id }}
-                    fieldId: $TEAM_FIELD_ID
+                    itemId: $item
+                    fieldId: $field
                     value: { singleSelectOptionId: $value }
                   }) {
                     projectV2Item { id }
@@ -90,8 +90,8 @@ jobs:
                 mutation($project: ID!, $item: ID!, $field: ID!, $value: String!) {
                   updateProjectV2ItemFieldValue(input: {
                     projectId: $project
-                    itemId: ${{ github.event.issue.node_id }}
-                    fieldId: $PROJECT_FIELD_ID
+                    itemId: $item
+                    fieldId: $field
                     value: { singleSelectOptionId: $value }
                   }) {
                     projectV2Item { id }
